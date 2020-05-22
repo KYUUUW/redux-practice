@@ -1,5 +1,3 @@
-# Redux
-
 Redux 공부를 시작하기 전 편리함을 몸으로 익히기 위해 VanillaJS 에서의 state 관리 방법을 살펴보자.
 
 ```jsx
@@ -300,16 +298,6 @@ function Home({ toDos, ...rest }) {
     </>
   );
 }
-```
-
-## mapStateToProps
-
-```jsx
-// routes/Home.js
-
-import { connect } from "react-redux";
-
-...
 
 function mapStateToProps(state, ownProps) {
 	return { toDos: state };
@@ -318,8 +306,153 @@ function mapStateToProps(state, ownProps) {
 export default connect(getCurrentState)(Home);
 ```
 
-store의 state 는 `connect` 를 통해 `getCurrentState` (mapStateToProps) 를 이용해 얻어진다. 리턴 값은 component 의 props 에 들어간다.
+## mapStateToProps
 
-`state` 는 store의 state
+store의 state 는 `connect` 와 `mapStateToProps` 를 통해 컴포넌트에서 이용 할 수 있다. `mapStateToProps` 의 리턴 값이 component 의 props 에 들어간다.
 
-`ownProps` 는 원래 받은 Prop
+- `state` 는 store의 state
+- `ownProps` 는 원래 받은 Prop
+
+## mapDispatchToProps
+
+store 의 상태를 수정 할 수 있는 dispatch 를 컴포넌트의 Prop 으로 사용하기 위함이다.
+
+```jsx
+// Home.js
+// ...
+function mapDispatchToProp(dispatch, ownProps) {
+  return { dispatch };
+}
+```
+
+해당 코드는 dispatch 가 컴포넌트의 prop으로 들어 올 수 있게 해준다.
+
+![https://s3-us-west-2.amazonaws.com/secure.notion-static.com/4583d1cc-317b-4fb7-9e07-cdcfc2bcc50b/Untitled.png](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/4583d1cc-317b-4fb7-9e07-cdcfc2bcc50b/Untitled.png)
+
+이런방법으로는 잘 사용하지 않고. actionCreator 을 만드는 방식을 쓴다.
+
+```jsx
+// store.js
+// ...
+import {createStore} from "redux";
+
+const ADD = "ADD";
+
+const addToDo = text => {
+    return {
+        type: ADD,
+        text
+    }
+}
+
+export const actionCreators = {
+    addToDo,
+}
+```
+
+```jsx
+//Home.js
+
+function mapDispatchToProp(dispatch, ownProps) {
+  return { addToDo: text => dispatch(actionCreators.addToDo(text)) };
+}
+```
+
+이렇게 하면 prop 에서 addToDo 를 호출해서 state 를 변경 할 수 있다.
+
+## 정리: 할일 목록 만들기
+
+```jsx
+// Home.js
+
+import React, { useState } from "react";
+import { connect } from "react-redux";
+import { actionCreators } from "../store";
+import ToDo from "../components/ToDo";
+
+function Home({ toDos, addToDo }) {
+  const [text, setText] = useState("");
+  function onChange(e) {
+    setText(e.target.value);
+  }
+  function onSubmit(e) {
+    e.preventDefault();
+    addToDo(text);
+    setText("");
+  }
+  return (
+    <>
+      <h1>To Do</h1>
+      <form onSubmit={onSubmit}>
+        <input type="text" value={text} onChange={onChange} />
+        <button>Add</button>
+      </form>
+      <ul>
+        {toDos.map((toDo) => (
+          <ToDo {...toDo} />
+        ))}
+      </ul>
+    </>
+  );
+}
+
+function mapStateToProp(state, ownProps) {
+  return { toDos: state };
+}
+
+function mapDispatchToProp(dispatch, ownProps) {
+  return { addToDo: (text) => dispatch(actionCreators.addToDo(text)) };
+}
+
+export default connect(mapStateToProp, mapDispatchToProp)(Home);
+```
+
+```jsx
+// ToDo.js
+
+import React from "react"
+import { connect } from "react-redux";
+import { actionCreators } from "../store";
+
+function ToDo ({text ,onBtnClick}) {
+
+    return (
+        <li>
+            {text} <button onClick={onBtnClick}>DEL</button>
+        </li>
+    )
+}
+
+function mapDispatchToProps(dispatch, ownProps) {
+    return {
+        onBtnClick: () => dispatch(actionCreators.deleteToDo(parseInt(ownProps.id)))
+    }
+}
+
+export default connect(null, mapDispatchToProps)(ToDo);
+```
+
+```jsx
+// store.js
+
+import React from "react"
+import { connect } from "react-redux";
+import { actionCreators } from "../store";
+
+function ToDo ({text ,onBtnClick}) {
+
+    return (
+        <li>
+            {text} <button onClick={onBtnClick}>DEL</button>
+        </li>
+    )
+}
+
+function mapDispatchToProps(dispatch, ownProps) {
+    return {
+        onBtnClick: () => dispatch(actionCreators.deleteToDo(parseInt(ownProps.id)))
+    }
+}
+
+export default connect(null, mapDispatchToProps)(ToDo);
+```
